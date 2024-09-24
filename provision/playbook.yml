@@ -62,7 +62,7 @@
     - name: Add crio repository
       shell: echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/ /"| tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
   
-    - name: Add crio repository2
+    - name: Add crio repository
       shell: echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.25/xUbuntu_22.04/ /"| tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:1.25.list
   
     - name: Get crio repository key 
@@ -70,7 +70,7 @@
         url: https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.25/xUbuntu_22.04/Release.key
         state: present   
         
-    - name: Get crio repository key 2
+    - name: Get crio repository key
       apt_key: 
         url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/Release.key
         state: present   
@@ -78,7 +78,7 @@
     - name: Add kubernetes key
       shell: curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg 
 
-    - name: Add crio repository2
+    - name: Add kubernetes repository
       shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
   
     - name: Update apt cache
@@ -101,29 +101,29 @@
         name: ['kubelet', 'kubeadm', 'kubectl']
         state: present
 
-    - name: Init master node
-      shell: kubeadm init --pod-network-cidr=10.244.0.0/16 > /home/vagrant/.kube/init.log
-    
     - file:
         path: "/home/vagrant/.kube"
         state: directory
-  
+
+    - name: Init master node
+      shell: kubeadm init --pod-network-cidr=10.244.0.0/16 > /home/vagrant/.kube/init.log
+
     - name: Copy a kubeconfig
       become: yes
       become_user: root
       shell: cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config && chown vagrant /home/vagrant/.kube/config
         
     - name: Install flannel
-      shell: kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml
+      become: yes
+      become_user: vagrant
+      shell: kubectl apply -f https://github.com/coreos/flannel/raw/master/Documentation/kube-flannel.yml --validate=false
   
     - name: Enable worker on master
+      become: yes
+      become_user: vagrant
       shell: kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
-    - name: Restart network
-      become: yes
-      become_user: root
-      shell: ip link set cni0 down && ip link set flannel.1 down && ip link delete cni0 && ip link delete flannel.1 && systemctl restart crio && systemctl restart kubelet
-  
     - name: Install nginx to kubernetes
+      become: yes
+      become_user: vagrant
       shell: kubectl apply -f /vagrant/provision/templates/config.yaml
-  
