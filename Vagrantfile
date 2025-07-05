@@ -8,12 +8,11 @@ Vagrant.configure("2") do |config|
     vb.cpus = 2
 	vb.customize ["modifyvm", :id, "--paravirtprovider", "kvm"]
 	vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
+	vb.customize ["modifyvm", :id, "--nictype1", "virtio"]
   end
 
   config.vm.provision "ansible_local" do |ansible|
 	ansible.install = true
     ansible.playbook = "playbook.yml"
-    #ansible.inventory_path = "inventory.ini"
-    #ansible.limit = "all"
   end
 end

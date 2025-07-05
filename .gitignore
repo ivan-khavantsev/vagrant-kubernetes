@@ -3,4 +3,5 @@ nohup.out
 .idea
 vendor
 logs/*
-.vagrant/
+registry/
+config
