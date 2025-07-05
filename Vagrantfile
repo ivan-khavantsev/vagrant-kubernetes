@@ -1,4 +1,5 @@
 Vagrant.configure("2") do |config|
+  config.vm.define "kubernetes"
   config.vm.box = "debian/bullseye64"
   config.vm.hostname = "k8s-master"
   config.vm.network "private_network", ip: "192.168.56.10"
