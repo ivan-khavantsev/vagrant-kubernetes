@@ -1,4 +1,121 @@
-- hosts: k8s
+- hosts: all
   become: yes
-  roles:
-    - k8s
+  tasks:
+   - name: Установка зависимостей
+     apt:
+       name:
+         - apt-transport-https
+         - ca-certificates
+         - curl
+         - gnupg
+         - lsb-release
+         - mc
+       state: present
+       update_cache: yes
+   
+   - name: Добавить GPG ключ Kubernetes
+     shell: |
+       curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key | gpg --dearmor -o /usr/share/keyrings/kubernetes-archive-keyring.gpg
+     args:
+       creates: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+   
+   - name: Добавить Kubernetes репозиторий
+     copy:
+       dest: /etc/apt/sources.list.d/kubernetes.list
+       content: |
+         deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /
+         
+   - name: Добавить Docker GPG ключ (для containerd.io)
+     apt_key:
+       url: https://download.docker.com/linux/debian/gpg
+       state: present
+
+   - name: Добавить Docker репозиторий (для containerd.io)
+     apt_repository:
+       repo: deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable
+       state: present
+       filename: docker
+       
+   - name: Установить containerd.io
+     apt:
+       name: containerd.io
+       state: present
+       update_cache: yes
+   
+   - name: Создать директорию для containerd
+     file:
+       path: /etc/containerd
+       state: directory
+   
+   - name: Генерация config.toml для containerd
+     shell: |
+       containerd config default | tee /etc/containerd/config.toml > /dev/null
+     args:
+       creates: /etc/containerd/config.toml
+   
+   - name: Включить SystemdCgroup в containerd
+     replace:
+       path: /etc/containerd/config.toml
+       regexp: 'SystemdCgroup = false'
+       replace: 'SystemdCgroup = true'
+   
+   - name: Перезапуск containerd
+     systemd:
+       name: containerd
+       enabled: yes
+       state: restarted    
+
+   - name: Включить ip_forward временно
+     sysctl:
+       name: net.ipv4.ip_forward
+       value: '1'
+       state: present
+       sysctl_set: yes
+       reload: yes
+   
+   - name: Убедиться, что ip_forward включён в /etc/sysctl.conf
+     lineinfile:
+       path: /etc/sysctl.conf
+       regexp: '^net\.ipv4\.ip_forward'
+       line: 'net.ipv4.ip_forward = 1'
+       state: present
+
+
+   - name: Установить kubelet, kubeadm и kubectl
+     apt:
+       name:
+         - kubelet
+         - kubeadm
+         - kubectl
+       state: present
+       update_cache: yes
+   
+   - name: Отключить swap
+     command: swapoff -a
+   
+   - name: Удалить строку swap из /etc/fstab
+     replace:
+       path: /etc/fstab
+       regexp: '^.* swap .*$'
+       replace: ''
+   
+   - name: Инициализация кластера
+     command: kubeadm init --apiserver-advertise-address=192.168.56.10 --pod-network-cidr=10.244.0.0/16
+     args:
+       creates: /etc/kubernetes/admin.conf
+   
+   - name: Копирование конфигурации kube на пользователя vagrant
+     become_user: vagrant
+     shell: |
+       mkdir -p /home/vagrant/.kube
+       cp -i /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+       chown vagrant:vagrant /home/vagrant/.kube/config
+   
+   - name: Установка flannel как сети
+     become_user: vagrant
+     shell: |
+       kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+     environment:
+       KUBECONFIG: /home/vagrant/.kube/config
+   
+   

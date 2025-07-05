@@ -1,0 +1,6 @@
+.vagrant
+nohup.out
+.idea
+vendor
+logs/*
+.vagrant/
