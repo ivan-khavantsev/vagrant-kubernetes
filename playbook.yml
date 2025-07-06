@@ -28,6 +28,11 @@
    - name: Добавить Docker GPG ключ (для containerd.io)
      apt_key:
        url: https://download.docker.com/linux/debian/gpg
+       state: present  
+       
+   - name: Добавить GPG ключ (для helm)
+     apt_key:
+       url: https://baltocdn.com/helm/signing.asc
        state: present
 
    - name: Добавить Docker репозиторий (для containerd.io)
@@ -35,6 +40,12 @@
        repo: deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable
        state: present
        filename: docker
+
+   - name: Добавить репозиторий (для heml)
+     apt_repository:
+       repo: deb https://baltocdn.com/helm/stable/debian/ all main
+       state: present
+       filename: helm
        
    - name: Установить containerd.io
      apt:
@@ -78,14 +89,15 @@
        line: 'net.ipv4.ip_forward = 1'
        state: present
 
-   - name: Установить kubelet, kubeadm и kubectl
+   - name: Установить kubelet, kubeadm и kubectl, helm
      apt:
        name:
          - kubelet
          - kubeadm
          - kubectl
+         - helm
        state: present
-       update_cache: yes
+       update_cache: yes     
    
    - name: Отключить swap
      command: swapoff -a
@@ -150,4 +162,4 @@
    - name: Restart containerd
      systemd:
        name: containerd
-       state: restarted       
+       state: restarted 
