@@ -1,7 +1,7 @@
 Vagrant.configure("2") do |config|
   config.vm.define "k8s-master"
-  config.vm.box = "debian/bullseye64"
-  config.vm.box_version = "11.20241217.1"
+  config.vm.box = "debian/bookworm64"
+  config.vm.box_version = "12.20250126.1"
   config.vm.hostname = "k8s-master"
   config.vm.network "private_network", ip: "192.168.56.10"
 
