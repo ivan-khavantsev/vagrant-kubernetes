@@ -147,7 +147,7 @@
    - name: Установка flannel как сети
      become_user: vagrant
      shell: |
-       kubectl apply -f /vagrant/registry.yaml
+       kubectl apply -n kube-system -f /vagrant/registry.yaml
      environment:
        KUBECONFIG: /home/vagrant/.kube/config   
        
